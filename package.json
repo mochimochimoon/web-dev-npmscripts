@@ -1,10 +1,9 @@
 {
   "type": "module",
   "scripts": {
-    "build": "node ./.npm_scripts/index.js",
-    "develop": "node ./.npm_scripts/index.js",
-    "docs": "node ./.npm_scripts/index.js",
-    "env": "node ./.npm_scripts/env.js"
+    "build": "node ./.scripts/build.js",
+    "develop": "node ./.scripts/develop.js",
+    "env": "node ./.scripts/env.js"
   },
   "devDependencies": {
     "@babel/preset-env": "^7.22.15",

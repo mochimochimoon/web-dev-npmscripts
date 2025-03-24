@@ -3,12 +3,12 @@ import imageminPngquant from 'imagemin-pngquant';
 import Jimp from 'jimp';
 import imageminMozjpeg from 'imagemin-mozjpeg';
 
-export default async (buffer, filePath, {rootDir}, convertorOption) => {
+export default async (buffer, filePath, {rootDir, option}) => {
   // 画像スケール変更
-  if(convertorOption.scale) {
+  if(option.scale) {
     await Jimp.read(buffer)
       .then((img) => {
-        img.scale(convertorOption.scale);
+        img.scale(option.scale);
         img.getBuffer(img.getMIME(), (e, arg) => {
           buffer = arg;
         });

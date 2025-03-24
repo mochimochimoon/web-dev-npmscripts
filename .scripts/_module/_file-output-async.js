@@ -10,7 +10,8 @@ export default async function ({
   modifier = false, // ファイル名装飾
   ignore = [], // 除外対象
   ext = false, // 拡張子
-}, convertorOption = false) {
+  // option = false, // 追加オプション 
+}) {
   // console.log(`- module[fileOutputAsync]: start...`);
 
   const target = path.posix.join(baseDir, '**/[^_]*'); // バックスラッシュだとglob`でエラー。posix使用
@@ -26,7 +27,7 @@ export default async function ({
     let buffer = fs.readFileSync(path.resolve(file));
     if(convertor) {
       try {
-        buffer = await convertor(buffer, file, arguments[0], arguments[1]);
+        buffer = await convertor(buffer, file, arguments[0]);
       } catch(e) {
         console.log(`------- module[fileOutputAsync]: convertor_error`);
         console.log(file);

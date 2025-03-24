@@ -4,7 +4,7 @@ import url from 'url';
 import path from 'path';
 import fs from 'fs';
 
-export default (_SETTING, _DIST) => {
+export default (_DIST, htmlSettings) => {
   const middleware = async (req, res, next) => {
     const requestUrl = url.parse(req.url).pathname;
     // .html以外は脱出
@@ -12,12 +12,27 @@ export default (_SETTING, _DIST) => {
       return next();
     }
 
-    // htmlと同名htmlTemplate(pug, ejs)があるかを検索
+    // htmlと同名htmlTemplate(pug, ejs)があるかを検索。
     const findTemplateResult = (() => {
-      for (let templateSetting of _SETTING.htmlTemplateSettings) {
-        const requestRelativeUrl = path.relative('/', requestUrl);
-        const filePath = path.join(templateSetting.baseDir, requestRelativeUrl).replace(/\.[^.]+$/, `.${templateSetting.ext}`);
+      for (let templateSetting of htmlSettings) {
         try {
+          // HTMLテンプレートファイルのpathを定義
+          const filePath = (() => {
+            const requestRelativeUrl = path.relative('/', requestUrl);
+            const templatePath = path.join(templateSetting.baseDir, requestRelativeUrl);
+            const templateDirname = path.dirname(templatePath);
+            const templateBasename = path.basename(templatePath, path.extname(templatePath));
+            const templateFilename  = (() => {
+              for(let filename of fs.readdirSync(templateDirname)) {
+                if(path.basename(filename, filename.extname) === templateBasename) {
+                  return filename;
+                }
+              }
+              throw new Error();
+            })();
+
+            return path.join(templateDirname, templateFilename);
+          })();
 
           const buffer = fs.readFileSync(filePath);
           console.log(`-middleware: render[${filePath}]`);
@@ -32,6 +47,7 @@ export default (_SETTING, _DIST) => {
       }
       return false;
     })();
+
     // 存在しない場合は脱出
     if(!findTemplateResult) {
       return next();

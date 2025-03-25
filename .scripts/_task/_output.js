@@ -4,19 +4,20 @@ import path from 'path';
 import {deleteSync} from 'del';
 import watch from 'glob-watcher';
 // module
-import command from './_command.js';
-import {convertorPugAsync, convertorEjsAsync} from './_convertor/_convertor-html-template-async.js';
-import convertorSassAsync from './_convertor/_convertor-sass-async.js';
-import convertorImgAsync from './_convertor/_convertor-img-async.js';
-import convertorJsAsync from './_convertor/_convertor-js-async.js';
-import fileOutputAsync from './_file-output-async.js';
-import browserSyncInit from './_browser-sync-init.js';
+import command from '../_module/_command.js';
+import {convertorPugAsync, convertorEjsAsync} from '../_module/_convertor/_convertor-html-template-async.js';
+import convertorSassAsync from '../_module/_convertor/_convertor-sass-async.js';
+import convertorImgAsync from '../_module/_convertor/_convertor-img-async.js';
+import convertorJsAsync from '../_module/_convertor/_convertor-js-async.js';
+import fileOutputAsync from '../_module/_file-output-async.js';
+import browserSyncInit from '../_module/_browser-sync-init.js';
 
-const _OUTPUTSETTINGS = [
+// 出力設定。元ソース/出力先/コンパイラーなど
+const _SETTINGS = [
   // 変換なし
   {
     name: 'raw',
-    settings: [
+    outputSettings: [
       {
         // ext: false,
         rootDir: './src/raw',
@@ -27,7 +28,7 @@ const _OUTPUTSETTINGS = [
   },
   {
     name: 'html',
-    settings: [
+    outputSettings: [
       {
         ext: 'html',
         rootDir: './src/ejs/',
@@ -40,11 +41,12 @@ const _OUTPUTSETTINGS = [
         baseDir: './src/pug/base/',
         convertor: convertorPugAsync,
       },
-    ]
+    ],
+    reload: 'before',
   },
   {
     name: 'css',
-    settings: [
+    outputSettings: [
       {
         ext: 'css',
         rootDir: './src/scss',
@@ -52,10 +54,11 @@ const _OUTPUTSETTINGS = [
         convertor: convertorSassAsync,
       },
     ],
+    reload: 'stream',
   },
   {
     name: 'js',
-    settings: [
+    outputSettings: [
       {
         ext: 'js',
         rootDir: './src/js',
@@ -66,7 +69,7 @@ const _OUTPUTSETTINGS = [
   },
   {
     name: 'img',
-    settings: [
+    outputSettings: [
       {
         // ext: false,
         rootDir: './src/img',
@@ -87,7 +90,7 @@ const _OUTPUTSETTINGS = [
 
 const _COMMAND = command();
 
-const _DIST = `${(!_COMMAND.option.deploy)? '_': ''}${_COMMAND.name || 'null'}`;
+const _DIST = `_${_COMMAND.name || 'null'}`;
 
 class Task {
   constructor(name, callback) {
@@ -106,10 +109,9 @@ class Task {
   }
 };
 
-
-for (let outputSetting of _OUTPUTSETTINGS) {
-  outputSetting.task = new Task(outputSetting.name, async () => {
-    await Promise.all(outputSetting.settings.map((item) => {
+for (let setting of _SETTINGS) {
+  setting.task = new Task(setting.taskName, async () => {
+    await Promise.all(setting.outputSettings.map((item) => {
       fileOutputAsync(Object.assign({
         // rootDir: './src/raw',
         // baseDir: './src/raw/base',
@@ -125,35 +127,36 @@ for (let outputSetting of _OUTPUTSETTINGS) {
 
 const taskBuild = new Task('build', async () => {
   deleteSync(_DIST, {force: false});
-  await Promise.all(_OUTPUTSETTINGS.map((outputSetting) => {
+  await Promise.all(_SETTINGS.map((outputSetting) => {
     return outputSetting.task.run();
   }));
 });
 
 const taskWatch = new Task('watch', async () => {
-  const htmlSettings = [].concat(..._OUTPUTSETTINGS.map((outputSetting) => {
-    const htmlSetting = outputSetting.settings.filter((setting) => {
-      return setting.ext === 'html';
+  const htmlSettings = [].concat(..._SETTINGS.map((setting) => {
+    const htmlSetting = setting.outputSettings.filter((outputSetting) => {
+      return outputSetting.ext === 'html';
     });
     return htmlSetting;
   }));
   const bs = browserSyncInit(_DIST, htmlSettings);
 
-  for(let outputSetting of _OUTPUTSETTINGS) {
-    const srcList = outputSetting.settings.map((setting) => {
-      return path.join(setting.rootDir, '**/*'); 
+  for(let setting of _SETTINGS) {
+    const srcList = setting.outputSettings.map((outputSetting) => {
+      return path.join(outputSetting.rootDir, '**/*'); 
     });
 
     watch(srcList.concat(['./src/.database/**/*', './src/.module/**/*']), async (done) => {
-      if(outputSetting.name === 'html') {
+      if(setting.reload === 'before') {
         console.log('reload');
         bs.reload();
-      }
-      await outputSetting.task.run();
-      if(outputSetting.name === 'css') {
-        console.log('reflesh stream');
+        await setting.task.run();
+      } else if(setting.reload === 'stream') {
+        await setting.task.run();
+        console.log('stream');
         bs.stream();
-      } else if(outputSetting.name !== 'html') {
+      } else {
+        await setting.task.run();
         console.log('reload');
         bs.reload();
       }

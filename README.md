@@ -3,17 +3,15 @@
 npm i
 ```
 
-ビルド
+コマンド
 ```
+// ビルド
 npm run build
-```
 
-開発
-```
+// 開発
 npm run develop
-```
 
-デプロイ
-```
-npm run docs --deploy
+// 開発環境を生成
+npm run env
+npm run env --min 
 ```
